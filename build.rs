@@ -6,7 +6,7 @@ use std::{
 	io::{self, Read, Write},
 	path::{Path, PathBuf},
 	process::Stdio,
-	str::FromStr
+	str::FromStr,
 };
 
 const ORT_VERSION: &str = "1.14.0";
@@ -44,7 +44,7 @@ enum Architecture {
 	X86,
 	X86_64,
 	Arm,
-	Arm64
+	Arm64,
 }
 
 #[cfg(feature = "download-binaries")]
@@ -57,7 +57,7 @@ impl FromStr for Architecture {
 			"x86_64" => Ok(Architecture::X86_64),
 			"arm" => Ok(Architecture::Arm),
 			"aarch64" => Ok(Architecture::Arm64),
-			_ => Err(format!("Unsupported architecture: {s}"))
+			_ => Err(format!("Unsupported architecture: {s}")),
 		}
 	}
 }
@@ -69,7 +69,7 @@ impl OnnxPrebuiltArchive for Architecture {
 			Architecture::X86 => "x86".into(),
 			Architecture::X86_64 => "x64".into(),
 			Architecture::Arm => "arm".into(),
-			Architecture::Arm64 => "arm64".into()
+			Architecture::Arm64 => "arm64".into(),
 		}
 	}
 }
@@ -80,7 +80,7 @@ impl OnnxPrebuiltArchive for Architecture {
 enum Os {
 	Windows,
 	Linux,
-	MacOS
+	MacOS,
 }
 
 #[cfg(feature = "download-binaries")]
@@ -89,7 +89,7 @@ impl Os {
 		match self {
 			Os::Windows => "zip",
 			Os::Linux => "tgz",
-			Os::MacOS => "tgz"
+			Os::MacOS => "tgz",
 		}
 	}
 }
@@ -103,7 +103,8 @@ impl FromStr for Os {
 			"windows" => Ok(Os::Windows),
 			"linux" => Ok(Os::Linux),
 			"macos" => Ok(Os::MacOS),
-			_ => Err(format!("Unsupported OS: {s}"))
+			"darwin" => Ok(Os::MacOS),
+			_ => Err(format!("Unsupported OS: {s}")),
 		}
 	}
 }
@@ -114,7 +115,7 @@ impl OnnxPrebuiltArchive for Os {
 		match self {
 			Os::Windows => "win".into(),
 			Os::Linux => "linux".into(),
-			Os::MacOS => "osx".into()
+			Os::MacOS => "osx".into(),
 		}
 	}
 }
@@ -123,7 +124,7 @@ impl OnnxPrebuiltArchive for Os {
 #[derive(Debug)]
 enum Accelerator {
 	None,
-	Gpu
+	Gpu,
 }
 
 #[cfg(feature = "download-binaries")]
@@ -131,7 +132,7 @@ impl OnnxPrebuiltArchive for Accelerator {
 	fn as_onnx_str(&self) -> Cow<str> {
 		match self {
 			Accelerator::None => "unaccelerated".into(),
-			Accelerator::Gpu => "gpu".into()
+			Accelerator::Gpu => "gpu".into(),
 		}
 	}
 }
@@ -141,7 +142,7 @@ impl OnnxPrebuiltArchive for Accelerator {
 struct Triplet {
 	os: Os,
 	arch: Architecture,
-	accelerator: Accelerator
+	accelerator: Accelerator,
 }
 
 #[cfg(feature = "download-binaries")]
@@ -166,7 +167,7 @@ impl OnnxPrebuiltArchive for Triplet {
 				self.os.as_onnx_str(),
 				self.arch.as_onnx_str(),
 				self.accelerator.as_onnx_str()
-			)
+			),
 		}
 	}
 }
@@ -182,7 +183,7 @@ fn prebuilt_onnx_url() -> (PathBuf, String) {
 	let triplet = Triplet {
 		os: env::var("CARGO_CFG_TARGET_OS").expect("unable to get target OS").parse().unwrap(),
 		arch: env::var("CARGO_CFG_TARGET_ARCH").expect("unable to get target arch").parse().unwrap(),
-		accelerator
+		accelerator,
 	};
 
 	let prebuilt_archive = format!("onnxruntime-{}-{}.{}", triplet.as_onnx_str(), ORT_VERSION, triplet.os.archive_extension());
@@ -218,7 +219,7 @@ fn prebuilt_protoc_url() -> (PathBuf, String) {
 #[cfg(feature = "download-binaries")]
 fn download<P>(source_url: &str, target_file: P)
 where
-	P: AsRef<Path>
+	P: AsRef<Path>,
 {
 	let resp = ureq::get(source_url)
 		.timeout(std::time::Duration::from_secs(300))
@@ -244,7 +245,7 @@ fn extract_archive(filename: &Path, output: &Path) {
 		Some(Some("zip")) => extract_zip(filename, output),
 		#[cfg(not(target_os = "windows"))]
 		Some(Some("tgz")) => extract_tgz(filename, output),
-		_ => unimplemented!()
+		_ => unimplemented!(),
 	}
 }
 
@@ -385,7 +386,7 @@ fn prepare_libort_dir() -> (PathBuf, bool) {
 		panic!("unsupported target architecture: {target_arch}");
 	}
 
-	if target.contains("macos") {
+	if target.contains("darwin") {
 		incompatible_providers![CUDA, OPENVINO, VITIS, ACL, ARMNN, TENSORRT, WINML, CANN];
 	} else if target.contains("windows") {
 		incompatible_providers![COREML, VITIS, ACL, ARMNN, ARMNN, CANN];
@@ -398,7 +399,7 @@ fn prepare_libort_dir() -> (PathBuf, bool) {
 	match strategy.as_ref().map_or("download", String::as_str) {
 		#[cfg(feature = "download-binaries")]
 		"download" => {
-			if target.contains("macos") {
+			if target.contains("darwin") {
 				incompatible_providers![CUDA, ONEDNN, OPENVINO, VITIS, TVM, TENSORRT, MIGRAPHX, DIRECTML, WINML, ACML, ARMNN, ROCM];
 			} else {
 				incompatible_providers![ONEDNN, COREML, OPENVINO, VITIS, TVM, MIGRAPHX, DIRECTML, WINML, ACML, ARMNN, ROCM];
@@ -458,7 +459,7 @@ fn prepare_libort_dir() -> (PathBuf, bool) {
 					"--shallow-submodules",
 					"--recursive",
 					ORT_GIT_REPO,
-					ORT_GIT_DIR
+					ORT_GIT_DIR,
 				])
 				.current_dir(&out_dir)
 				.stdout(Stdio::null())
@@ -479,7 +480,7 @@ fn prepare_libort_dir() -> (PathBuf, bool) {
 						PathBuf::default()
 					}
 				},
-				PathBuf::from
+				PathBuf::from,
 			);
 
 			let mut command = Command::new(python);
@@ -538,7 +539,7 @@ fn prepare_libort_dir() -> (PathBuf, bool) {
 							build_args.push("--cmake_generator=Visual Studio 17 2022");
 						}
 					}
-					Some(VsFindResult { vs_exe_path: None, .. }) | None => panic!("[ort] unable to find Visual Studio installation")
+					Some(VsFindResult { vs_exe_path: None, .. }) | None => panic!("[ort] unable to find Visual Studio installation"),
 				};
 			}
 
@@ -588,7 +589,6 @@ fn prepare_libort_dir() -> (PathBuf, bool) {
 			println!("cargo:rustc-link-lib=static=absl_low_level_hash");
 			println!("cargo:rustc-link-search=native={}", external_lib_dir.join("abseil-cpp").join("absl").join("container").display());
 			println!("cargo:rustc-link-lib=static=absl_raw_hash_set");
-
 			if cfg!(target_os = "macos") {
 				println!("cargo:rustc-link-lib=framework=Foundation");
 			}
@@ -599,7 +599,7 @@ fn prepare_libort_dir() -> (PathBuf, bool) {
 
 			(out_dir, false)
 		}
-		_ => panic!("[ort] unknown strategy: {} (valid options are `download` or `system`)", strategy.unwrap_or_else(|_| "unknown".to_string()))
+		_ => panic!("[ort] unknown strategy: {} (valid options are `download` or `system`)", strategy.unwrap_or_else(|_| "unknown".to_string())),
 	}
 }
 
@@ -607,7 +607,7 @@ fn prepare_libort_dir() -> (PathBuf, bool) {
 fn generate_bindings(include_dir: &Path) {
 	let clang_args = &[
 		format!("-I{}", include_dir.display()),
-		format!("-I{}", include_dir.join("onnxruntime").join("core").join("session").display())
+		format!("-I{}", include_dir.join("onnxruntime").join("core").join("session").display()),
 	];
 
 	println!("cargo:rerun-if-changed=src/wrapper.h");
